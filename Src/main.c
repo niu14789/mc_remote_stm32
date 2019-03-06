@@ -68,7 +68,7 @@ static void MX_TIM4_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+uint32_t ADC_Value[100][5];
 /* USER CODE END 0 */
 
 /**
@@ -235,7 +235,7 @@ static void MX_ADC1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN ADC1_Init 2 */
-
+  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&ADC_Value, sizeof(ADC_Value));	
   /* USER CODE END ADC1_Init 2 */
 
 }
