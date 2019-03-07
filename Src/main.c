@@ -20,7 +20,8 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-
+#include "string.h"
+#include "dev.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -50,6 +51,8 @@ SPI_HandleTypeDef hspi2;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
 
+dev_HandleTypeDef __led_ctrl;
+dev_HandleTypeDef __beep_ctrl;
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -65,12 +68,64 @@ static void MX_TIM4_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
-
+#define SAMPLE_DEEP            (20)
+#define SAMPLE_CHANNEL_COUNT   (5) 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint32_t ADC_Value[100][5];
+uint32_t ADC_Value[SAMPLE_DEEP][SAMPLE_CHANNEL_COUNT];
+/* adc raw data */
+unsigned int adc_raw_data[5];
 /* USER CODE END 0 */
+/*!< DMA transfer complete callback */
+void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc)
+{
 
+}
+/* data transfer */
+void adc_simple_filter(const unsigned int * base_data,unsigned int * raw , unsigned int len)
+{	
+	/* Initializes */
+	unsigned short max[SAMPLE_CHANNEL_COUNT];
+	unsigned short min[SAMPLE_CHANNEL_COUNT];
+	unsigned int   sum[SAMPLE_CHANNEL_COUNT];
+	/* Initializes full of zero */
+	memset((void *)&max,0,sizeof(max));
+	memset((void *)&min,0xff,sizeof(min));
+	memset((void *)&sum,0,sizeof(sum));
+	/* get base addr */
+	const unsigned int * base_addr = base_data;
+	/* set a simple filter and Calculate the average of each channel */
+	for( int i = 0 ; i < SAMPLE_DEEP * SAMPLE_CHANNEL_COUNT ; i ++ )
+	{
+		/* Get the maximum value in the data */
+		if( max[i%SAMPLE_CHANNEL_COUNT] < base_addr[i] )
+		{
+			max[i%SAMPLE_CHANNEL_COUNT] = base_addr[i];
+		}
+		/* Get the maximum value in the data */
+		if( min[i%SAMPLE_CHANNEL_COUNT] > base_addr[i] )
+		{
+			min[i%SAMPLE_CHANNEL_COUNT] = base_addr[i];
+		}		
+		/* Calculate the sum of data */
+		sum[i%SAMPLE_CHANNEL_COUNT] += base_addr[i];
+	}
+	/* filter enable */
+	for( int i = 0 ; i < SAMPLE_CHANNEL_COUNT ; i ++ )
+	{
+		sum[i] -= max[i] + min[i];
+	}
+	/* full buffer */
+	if( len < SAMPLE_CHANNEL_COUNT )
+	{
+		return;
+	}
+	/* full buffer */
+	for( int i = 0 ; i < SAMPLE_CHANNEL_COUNT ; i ++ )
+	{	
+	   raw[i] = (unsigned int)( (float)sum[i] / (float)(SAMPLE_DEEP - 2)/* Remove the maximum and minimum */ );
+	}
+}
 /**
   * @brief  The application entry point.
   * @retval int
@@ -105,15 +160,40 @@ int main(void)
   MX_TIM3_Init();
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
-
+  Beep_Init(&__beep_ctrl);
   /* USER CODE END 2 */
-
+	
+  //__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 750);	
+	unsigned char beep_t = 0;
+	volatile unsigned int tick_0 = 0,tick_1 = 0,cnt = 0;
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+		tick_0  = HAL_GetTick();
+		/* Filtering the collected data to generate the original data */
+		adc_simple_filter((const unsigned int *)ADC_Value,adc_raw_data,sizeof(adc_raw_data)/sizeof(adc_raw_data[0]));
     /* USER CODE END WHILE */
-
+    if( HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_3) == 0 )
+		{
+			if( beep_t == 0 )
+			{
+				beep_t = 1;
+				__beep_ctrl.ioctrl(LOWPOWER,0,0);
+			}
+		}
+		else
+		{
+			if( beep_t == 1 )
+			{
+				beep_t = 0;
+				__beep_ctrl.ioctrl(CALIBRATE,0,0);				
+			}
+		}
+		
+		cnt ++;
+		
+		tick_1 += HAL_GetTick() - tick_0;
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -235,7 +315,7 @@ static void MX_ADC1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN ADC1_Init 2 */
-  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&ADC_Value, sizeof(ADC_Value));	
+  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&ADC_Value, sizeof(ADC_Value) / 4 );	
   /* USER CODE END ADC1_Init 2 */
 
 }
@@ -299,7 +379,7 @@ static void MX_TIM3_Init(void)
   htim3.Instance = TIM3;
   htim3.Init.Prescaler = 36000;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 2000;
+  htim3.Init.Period = 4000;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_PWM_Init(&htim3) != HAL_OK)
@@ -313,7 +393,7 @@ static void MX_TIM3_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 0;
+  sConfigOC.Pulse = 3800;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_LOW;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
@@ -321,7 +401,7 @@ static void MX_TIM3_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN TIM3_Init 2 */
-
+  HAL_TIM_PWM_Start(&htim3,TIM_CHANNEL_1);
   /* USER CODE END TIM3_Init 2 */
   HAL_TIM_MspPostInit(&htim3);
 
@@ -374,7 +454,8 @@ static void MX_TIM4_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN TIM4_Init 2 */
-
+  HAL_TIM_PWM_Start(&htim4,TIM_CHANNEL_3);
+	HAL_TIM_PWM_Start(&htim4,TIM_CHANNEL_4);
   /* USER CODE END TIM4_Init 2 */
   HAL_TIM_MspPostInit(&htim4);
 
