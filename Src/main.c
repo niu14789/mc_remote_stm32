@@ -54,11 +54,11 @@ TIM_HandleTypeDef htim4;
 /* USER CODE BEGIN PV */
 dev_HandleTypeDef __led_ctrl;
 dev_HandleTypeDef __beep_ctrl;
-/* USER CODE BEGIN 0 */
-uint32_t ADC_Value[SAMPLE_DEEP][SAMPLE_CHANNEL_COUNT];
-/* adc raw data */
-unsigned int adc_raw_data[5];
 /* USER CODE END PV */
+
+/* USER CODE BEGIN PFP */
+
+/* USER CODE END PFP */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -68,11 +68,12 @@ static void MX_ADC1_Init(void);
 static void MX_SPI2_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM4_Init(void);
-/* USER CODE BEGIN PFP */
-
-/* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
+/* USER CODE BEGIN 0 */
+uint32_t ADC_Value[SAMPLE_DEEP][SAMPLE_CHANNEL_COUNT];
+/* adc raw data */
+unsigned int adc_raw_data[5];
 /*!< DMA transfer complete callback */
 void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc)
 {
@@ -167,7 +168,6 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    /* USER CODE BEGIN 3 */		
 		tick_0  = HAL_GetTick();
 		/* Filtering the collected data to generate the original data */
 		adc_simple_filter((const unsigned int *)ADC_Value,adc_raw_data,sizeof(adc_raw_data)/sizeof(adc_raw_data[0]));
@@ -192,9 +192,10 @@ int main(void)
 		cnt ++;
 		
 		tick_1 += HAL_GetTick() - tick_0;
-    /* USER CODE END 3 */
+		/* USER CODE END WHILE */
+    /* USER CODE BEGIN 3 */		
   }
-	/* USER CODE END WHILE */
+	 /* USER CODE END 3 */
 }
 
 /**
