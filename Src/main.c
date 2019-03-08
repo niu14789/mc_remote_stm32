@@ -20,11 +20,10 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "string.h"
-#include "dev.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "string.h"
+#include "dev.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -34,7 +33,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define SAMPLE_DEEP            (20)
+#define SAMPLE_CHANNEL_COUNT   (5) 
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -51,10 +51,13 @@ SPI_HandleTypeDef hspi2;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
 
+/* USER CODE BEGIN PV */
 dev_HandleTypeDef __led_ctrl;
 dev_HandleTypeDef __beep_ctrl;
-/* USER CODE BEGIN PV */
-
+/* USER CODE BEGIN 0 */
+uint32_t ADC_Value[SAMPLE_DEEP][SAMPLE_CHANNEL_COUNT];
+/* adc raw data */
+unsigned int adc_raw_data[5];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -68,14 +71,8 @@ static void MX_TIM4_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
-#define SAMPLE_DEEP            (20)
-#define SAMPLE_CHANNEL_COUNT   (5) 
+
 /* Private user code ---------------------------------------------------------*/
-/* USER CODE BEGIN 0 */
-uint32_t ADC_Value[SAMPLE_DEEP][SAMPLE_CHANNEL_COUNT];
-/* adc raw data */
-unsigned int adc_raw_data[5];
-/* USER CODE END 0 */
 /*!< DMA transfer complete callback */
 void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc)
 {
@@ -126,6 +123,8 @@ void adc_simple_filter(const unsigned int * base_data,unsigned int * raw , unsig
 	   raw[i] = (unsigned int)( (float)sum[i] / (float)(SAMPLE_DEEP - 2)/* Remove the maximum and minimum */ );
 	}
 }
+/* USER CODE END 0 */
+
 /**
   * @brief  The application entry point.
   * @retval int
@@ -161,15 +160,14 @@ int main(void)
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
   Beep_Init(&__beep_ctrl);
-  /* USER CODE END 2 */
-	
-  //__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 750);	
 	unsigned char beep_t = 0;
 	volatile unsigned int tick_0 = 0,tick_1 = 0,cnt = 0;
+  /* USER CODE END 2 */	
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    /* USER CODE BEGIN 3 */		
 		tick_0  = HAL_GetTick();
 		/* Filtering the collected data to generate the original data */
 		adc_simple_filter((const unsigned int *)ADC_Value,adc_raw_data,sizeof(adc_raw_data)/sizeof(adc_raw_data[0]));
@@ -194,9 +192,8 @@ int main(void)
 		cnt ++;
 		
 		tick_1 += HAL_GetTick() - tick_0;
-    /* USER CODE BEGIN 3 */
+    /* USER CODE END 3 */
   }
-  /* USER CODE END 3 */
 }
 
 /**
