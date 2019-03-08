@@ -56,6 +56,8 @@ dev_HandleTypeDef __led_ctrl;
 dev_HandleTypeDef __beep_ctrl;
 dev_HandleTypeDef __crc16;
 dev_HandleTypeDef __comm;
+dev_HandleTypeDef __flash;
+fls_HandleTypeDef __fls;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -76,7 +78,7 @@ static uint32_t ADC_Value[SAMPLE_DEEP][SAMPLE_CHANNEL_COUNT];
 /* adc raw data */
 static unsigned int adc_raw_data[5];
 /* unique ID got it form crc16 */
-static unsigned short unique_id; 
+static unsigned short unique_id;
 /*!< DMA transfer complete callback */
 void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc)
 {
@@ -123,13 +125,29 @@ int main(void)
 	led_Init(&__led_ctrl);
 	CRC16_Init(&__crc16);
 	common_Init(&__comm);
+	Flash_Init(&__flash);
 	/* get unique ID */
-	unique_id = __comm.ioctrl(UNIQUE_ID,&__crc16,0);
-	/*------------------*/
+	unique_id = __comm.ioctrl(UNIQUE_ID,0,&__crc16,0);
+	/* logic code . check nrf first */
+	//---------------------
+	/* need to calibrate or not */
+	if( __flash.ioctrl(CALI_BUFFER,(unsigned int)&__crc16,&__fls,sizeof(__fls)) != 0 ||
+		  __comm.ioctrl(KEY_CALIBRATION,0,0,0) == 0 ||
+	    __fls.unique_id != unique_id )
+	{
+		/* notity */
+#if SILIENCE_DEBUG		
+		__beep_ctrl.ioctrl(CALIBRATE,0,0,0);
+#endif		
+		__led_ctrl.ioctrl(GS_RS,0,0,0);
+		/* process of calibration */
+		__comm.process((unsigned int)&ADC_Value,(unsigned int)&__fls,0,0);
+	}
+	/*------------*/
 	unsigned char beep_t = 0,beep_t1 = 0;
 	volatile unsigned int tick_0 = 0,tick_1 = 0,cnt = 0;
   /* USER CODE END 2 */
-
+  //__flash.write(0x0800F000 - 2,"1234",4);
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
@@ -144,7 +162,7 @@ int main(void)
 			if( beep_t == 0 )
 			{
 				beep_t = 1;
-				__beep_ctrl.ioctrl(LOWPOWER,0,0);
+				__beep_ctrl.ioctrl(LOWPOWER,0,0,0);
 			}
 		}
 		else
@@ -152,7 +170,7 @@ int main(void)
 			if( beep_t == 1 )
 			{
 				beep_t = 0;
-				__beep_ctrl.ioctrl(CALIBRATE,0,0);				
+				__beep_ctrl.ioctrl(CALIBRATE,0,0,0);				
 			}
 		}
 		

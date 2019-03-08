@@ -24,10 +24,13 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 /* USER CODE BEGIN Includes */
-
+#define SILIENCE_DEBUG         (0)
+/* ADC settings */
 #define SAMPLE_DEEP            (20)
 #define SAMPLE_CHANNEL_COUNT   (5) 
-
+/* flash eeprom base addr */
+#define EEBASE_ADDR            (0x0800F800)  
+/* for ioctrls */
 #define LOWPOWER    (0)
 #define THRERROR    (1)
 #define CALIBRATE   (2)
@@ -50,7 +53,10 @@
 #define GO_RT       (12) /* green on   . red fast */
 #define GF_RT       (13) /* green off  . red fast */
 /* for common */
-#define UNIQUE_ID   (0)
+#define UNIQUE_ID         (0)
+#define KEY_CALIBRATION   (1)
+/* for flash operation */
+#define CALI_BUFFER (0)
 /*------------*/
 /* USER CODE END Includes */
 /**
@@ -67,11 +73,22 @@ typedef struct
 	int (*enable)(void);
 	int (*disable)(void);
 	/* ioctrl */
-	int (*ioctrl)(unsigned int cmd,void * data,unsigned len);
+	int (*ioctrl)(unsigned int cmd,unsigned int param,void * data,unsigned len);
 	/* get state */
 	int (*state)(void);
+	/* process */
+	void (*process)(unsigned int pm1,unsigned int pm2,unsigned int pm3,unsigned int pm4);
 }dev_HandleTypeDef;
-
+/**
+  * @brief  device Base Handle Structure definition
+  */
+typedef struct
+{
+  unsigned short channel[4][3];//high,mid,low
+  unsigned short unique_id;
+	unsigned short rev[18];
+  unsigned short crc_check;
+}fls_HandleTypeDef;
 
 /* some functions */
 /* beep init */
@@ -79,6 +96,8 @@ int Beep_Init(dev_HandleTypeDef * dev);
 int led_Init(dev_HandleTypeDef * dev);
 int CRC16_Init(dev_HandleTypeDef * dev);
 int common_Init(dev_HandleTypeDef * dev);
+int Flash_Init(dev_HandleTypeDef * dev);
+
 /* end of files */
 #endif
 

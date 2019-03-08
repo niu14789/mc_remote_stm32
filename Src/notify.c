@@ -40,7 +40,7 @@ static void beep_simple_settings(unsigned int psr,unsigned int autoload,unsigned
 		TIM3->CR1 |= 0x01;	                
 }                                       
 /* Define various functional interfaces */
-static int beep_ioctrl(unsigned int cmd,void * data , unsigned int len)
+static int beep_ioctrl(unsigned int cmd,unsigned int param,void * data , unsigned int len)
 {
 	/* parse the cmd */
 	switch(cmd)
@@ -93,7 +93,9 @@ static void delay_notify(unsigned int ms)
 int Beep_Init(dev_HandleTypeDef * dev)
 {
 	/* play a short music */
-	/* beep_ioctrl(INIT,0,0); */
+#if SILIENCE_DEBUG	
+	beep_ioctrl(INIT,0,0,0);
+#endif	
 	/* hold on a while */
 	delay_notify(100);
 	/* disable the PWM first */
@@ -122,7 +124,7 @@ static void led_simple_settings(unsigned int psr,unsigned int autoload,unsigned 
 		TIM4->CR1 |= 0x01;	                
 } 
 /* Define various functional interfaces */
-static int led_ioctrl(unsigned int cmd,void * data , unsigned int len)
+static int led_ioctrl(unsigned int cmd,unsigned int param,void * data , unsigned int len)
 {
 	/* parse the cmd */
 	switch(cmd)
@@ -192,7 +194,7 @@ static int led_ioctrl(unsigned int cmd,void * data , unsigned int len)
 int led_Init(dev_HandleTypeDef * dev)
 {
 	/* init status */
-	led_ioctrl(GO_RO,0,0);
+	led_ioctrl(GO_RO,0,0,0);
 	/* set functions */
 	dev->ioctrl = led_ioctrl;
 	/* return OK */
