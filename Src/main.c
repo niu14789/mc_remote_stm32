@@ -171,7 +171,7 @@ int main(void)
 		tick_0  = HAL_GetTick();
 		/* Filtering the collected data to generate the original data */
 		adc_simple_filter((const unsigned int *)ADC_Value,adc_raw_data,sizeof(adc_raw_data)/sizeof(adc_raw_data[0]));
-    /* USER CODE END WHILE */
+    
     if( HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_3) == 0 )
 		{
 			if( beep_t == 0 )
@@ -194,6 +194,7 @@ int main(void)
 		tick_1 += HAL_GetTick() - tick_0;
     /* USER CODE END 3 */
   }
+	/* USER CODE END WHILE */
 }
 
 /**
