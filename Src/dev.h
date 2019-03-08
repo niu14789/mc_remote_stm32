@@ -24,10 +24,34 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 /* USER CODE BEGIN Includes */
+
+#define SAMPLE_DEEP            (20)
+#define SAMPLE_CHANNEL_COUNT   (5) 
+
 #define LOWPOWER    (0)
 #define THRERROR    (1)
 #define CALIBRATE   (2)
-#define REV_TESTD   (3)
+#define HARDFAULT   (3)
+#define INIT        (4)
+/* led defines */
+#define GO_RO       (0)  /* green and red are on  */
+#define GF_RF       (1)  /* green and red are off */
+#define GO_RF       (2)  /* green on . red off */
+#define GF_RO       (3)  /* green off . red on */
+/* flash */
+#define GS_RO       (4)  /* green slow . red on   */
+#define GS_RF       (5)  /* green slow . red off  */
+#define GS_RS       (6)  /* green slow . red slow */
+#define GT_RO       (7)  /* green fast . red on   */
+#define GT_RF       (8)  /* green fast . red off  */
+#define GT_RT       (9)  /* green fast . red fast */
+#define GO_RS       (10) /* green on   . red slow */
+#define GF_RS       (11) /* green off  . red slow */
+#define GO_RT       (12) /* green on   . red fast */
+#define GF_RT       (13) /* green off  . red fast */
+/* for common */
+#define UNIQUE_ID   (0)
+/*------------*/
 /* USER CODE END Includes */
 /**
   * @brief  device Base Handle Structure definition
@@ -52,6 +76,9 @@ typedef struct
 /* some functions */
 /* beep init */
 int Beep_Init(dev_HandleTypeDef * dev);
+int led_Init(dev_HandleTypeDef * dev);
+int CRC16_Init(dev_HandleTypeDef * dev);
+int common_Init(dev_HandleTypeDef * dev);
 /* end of files */
 #endif
 

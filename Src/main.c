@@ -34,8 +34,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define SAMPLE_DEEP            (20)
-#define SAMPLE_CHANNEL_COUNT   (5) 
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -55,6 +54,8 @@ TIM_HandleTypeDef htim4;
 /* USER CODE BEGIN PV */
 dev_HandleTypeDef __led_ctrl;
 dev_HandleTypeDef __beep_ctrl;
+dev_HandleTypeDef __crc16;
+dev_HandleTypeDef __comm;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -71,59 +72,17 @@ static void MX_TIM4_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint32_t ADC_Value[SAMPLE_DEEP][SAMPLE_CHANNEL_COUNT];
+static uint32_t ADC_Value[SAMPLE_DEEP][SAMPLE_CHANNEL_COUNT];
 /* adc raw data */
-unsigned int adc_raw_data[5];
+static unsigned int adc_raw_data[5];
+/* unique ID got it form crc16 */
+static unsigned short unique_id; 
 /*!< DMA transfer complete callback */
 void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc)
 {
 
 }
-/* data transfer */
-void adc_simple_filter(const unsigned int * base_data,unsigned int * raw , unsigned int len)
-{	
-	/* Initializes */
-	unsigned short max[SAMPLE_CHANNEL_COUNT];
-	unsigned short min[SAMPLE_CHANNEL_COUNT];
-	unsigned int   sum[SAMPLE_CHANNEL_COUNT];
-	/* Initializes full of zero */
-	memset((void *)&max,0,sizeof(max));
-	memset((void *)&min,0xff,sizeof(min));
-	memset((void *)&sum,0,sizeof(sum));
-	/* get base addr */
-	const unsigned int * base_addr = base_data;
-	/* set a simple filter and Calculate the average of each channel */
-	for( int i = 0 ; i < SAMPLE_DEEP * SAMPLE_CHANNEL_COUNT ; i ++ )
-	{
-		/* Get the maximum value in the data */
-		if( max[i%SAMPLE_CHANNEL_COUNT] < base_addr[i] )
-		{
-			max[i%SAMPLE_CHANNEL_COUNT] = base_addr[i];
-		}
-		/* Get the maximum value in the data */
-		if( min[i%SAMPLE_CHANNEL_COUNT] > base_addr[i] )
-		{
-			min[i%SAMPLE_CHANNEL_COUNT] = base_addr[i];
-		}		
-		/* Calculate the sum of data */
-		sum[i%SAMPLE_CHANNEL_COUNT] += base_addr[i];
-	}
-	/* filter enable */
-	for( int i = 0 ; i < SAMPLE_CHANNEL_COUNT ; i ++ )
-	{
-		sum[i] -= max[i] + min[i];
-	}
-	/* full buffer */
-	if( len < SAMPLE_CHANNEL_COUNT )
-	{
-		return;
-	}
-	/* full buffer */
-	for( int i = 0 ; i < SAMPLE_CHANNEL_COUNT ; i ++ )
-	{	
-	   raw[i] = (unsigned int)( (float)sum[i] / (float)(SAMPLE_DEEP - 2)/* Remove the maximum and minimum */ );
-	}
-}
+
 /* USER CODE END 0 */
 
 /**
@@ -161,7 +120,13 @@ int main(void)
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
   Beep_Init(&__beep_ctrl);
-	unsigned char beep_t = 0;
+	led_Init(&__led_ctrl);
+	CRC16_Init(&__crc16);
+	common_Init(&__comm);
+	/* get unique ID */
+	unique_id = __comm.ioctrl(UNIQUE_ID,&__crc16,0);
+	/*------------------*/
+	unsigned char beep_t = 0,beep_t1 = 0;
 	volatile unsigned int tick_0 = 0,tick_1 = 0,cnt = 0;
   /* USER CODE END 2 */
 
@@ -171,8 +136,9 @@ int main(void)
   {
 		tick_0  = HAL_GetTick();
 		/* Filtering the collected data to generate the original data */
-		adc_simple_filter((const unsigned int *)ADC_Value,adc_raw_data,sizeof(adc_raw_data)/sizeof(adc_raw_data[0]));
-    
+		//adc_simple_filter((const unsigned int *)ADC_Value,adc_raw_data,sizeof(adc_raw_data)/sizeof(adc_raw_data[0]));
+    __comm.read((unsigned int)&ADC_Value,adc_raw_data,sizeof(adc_raw_data)/sizeof(adc_raw_data[0]));
+		
     if( HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_3) == 0 )
 		{
 			if( beep_t == 0 )
@@ -187,6 +153,15 @@ int main(void)
 			{
 				beep_t = 0;
 				__beep_ctrl.ioctrl(CALIBRATE,0,0);				
+			}
+		}
+		
+		if( HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_1) == 0 )
+		{
+			if( beep_t1 == 0 )
+			{
+				beep_t1 = 1;
+				__beep_ctrl.disable();
 			}
 		}
 		
@@ -378,9 +353,9 @@ static void MX_TIM3_Init(void)
 
   /* USER CODE END TIM3_Init 1 */
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 36000;
+  htim3.Init.Prescaler = 72;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 2000;
+  htim3.Init.Period = 20;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_PWM_Init(&htim3) != HAL_OK)
@@ -394,7 +369,7 @@ static void MX_TIM3_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 0;
+  sConfigOC.Pulse = 21;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_LOW;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
