@@ -24,7 +24,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 /* USER CODE BEGIN Includes */
-#define SILIENCE_DEBUG         (0)
+#define SILIENCE_DEBUG         (1)
 /* ADC settings */
 #define SAMPLE_DEEP            (20)
 #define SAMPLE_CHANNEL_COUNT   (5) 
