@@ -129,6 +129,7 @@ int led_Init(dev_HandleTypeDef * dev);
 int CRC16_Init(dev_HandleTypeDef * dev);
 int common_Init(dev_HandleTypeDef * dev);
 int Flash_Init(dev_HandleTypeDef * dev);
+int nrf24L01_Init( dev_HandleTypeDef * dev , void * spi_handle );
 
 /* end of files */
 #endif

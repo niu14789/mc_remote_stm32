@@ -60,6 +60,7 @@ dev_HandleTypeDef __flash;
 fls_HandleTypeDef __fls;
 rcs_HandleTypeDef __rc;
 tep_HandleTypeDef __tep;
+dev_HandleTypeDef __nrf;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -134,14 +135,14 @@ int main(void)
 	unique_id = __comm.ioctrl(UNIQUE_ID,0,&__crc16,0);
 	/* logic code . check battery and nrf first */
 	__comm.read((unsigned int)&ADC_Value,adc_raw_data,sizeof(adc_raw_data)/sizeof(adc_raw_data[0]));
-	/* low power . beep */
-	if( adc_raw_data[4] < 2358 ) //( 3.8V / 2 ) / 3.3 * 4096 = 2358;
+	/* check nrf */
+	if( nrf24L01_Init(&__nrf,&hspi2) != 0 )
 	{
-		#if SILIENCE_DEBUG		
-				__beep_ctrl.ioctrl(LOWPOWER,0,0,0);
-		#endif			
+		/* can not find the nrf moudle */
+		__led_ctrl.ioctrl(GT_RT,0,0,0);
+		/* stop at here */
+		while(1);
 	}
-	//---------------------nrf
 	/* need to calibrate or not */
 	if( __flash.ioctrl(CALI_BUFFER,(unsigned int)&__crc16,&__fls,sizeof(__fls)) != 0 ||
 		  __comm.ioctrl(KEY_CALIBRATION,0,0,0) == 0 ||
@@ -155,19 +156,14 @@ int main(void)
 		__comm.process((unsigned int)&ADC_Value,(unsigned int)&__fls,
 			             (unsigned int)&__led_ctrl,(unsigned int)&__flash,(unsigned int)&__crc16);
 	}
-	/*------------*/
-	unsigned char beep_t = 0,beep_t1 = 0;
-	volatile unsigned int tick_0 = 0,tick_1 = 0,cnt = 0;
   /* USER CODE END 2 */
-  //__flash.write(0x0800F000 - 2,"1234",4);
+
   /* Infinite loop */
 	__led_ctrl.ioctrl(GS_RO,0,0,0);
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-		tick_0  = HAL_GetTick();
 		/* Filtering the collected data to generate the original data */
-		//adc_simple_filter((const unsigned int *)ADC_Value,adc_raw_data,sizeof(adc_raw_data)/sizeof(adc_raw_data[0]));
     __comm.read((unsigned int)&ADC_Value,adc_raw_data,sizeof(adc_raw_data)/sizeof(adc_raw_data[0]));
 		/* transfer to rc */
 		__tep.raw = (int *)&adc_raw_data;
@@ -178,36 +174,15 @@ int main(void)
 		__tep.unique_id = unique_id;
 		/* transfer to rc */
 		__comm.ioctrl(TRANSFER_RC,0,&__tep,sizeof(__tep));
-		
-    if( HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_3) == 0 )
+		/* send data */
+		__nrf.write(0,&__rc,sizeof(__rc));
+		/* low power . beep */
+		if( adc_raw_data[4] < 2358 ) //( 3.8V / 2 ) / 3.3 * 4096 = 2358;
 		{
-			if( beep_t == 0 )
-			{
-				beep_t = 1;
-				__beep_ctrl.ioctrl(LOWPOWER,0,0,0);
-			}
-		}
-		else
-		{
-			if( beep_t == 1 )
-			{
-				beep_t = 0;
-				__beep_ctrl.ioctrl(CALIBRATE,0,0,0);				
-			}
-		}
-		
-		if( HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_1) == 0 )
-		{
-			if( beep_t1 == 0 )
-			{
-				beep_t1 = 1;
-				__beep_ctrl.disable();
-			}
-		}
-		
-		cnt ++;
-		
-		tick_1 += HAL_GetTick() - tick_0;
+			#if SILIENCE_DEBUG		
+					__beep_ctrl.ioctrl(LOWPOWER,0,0,0);
+			#endif			
+		}		
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
