@@ -128,17 +128,22 @@ int main(void)
 	Flash_Init(&__flash);
 	/* get unique ID */
 	unique_id = __comm.ioctrl(UNIQUE_ID,0,&__crc16,0);
-	/* logic code . check nrf first */
-	//---------------------
+	/* logic code . check battery and nrf first */
+	__comm.read((unsigned int)&ADC_Value,adc_raw_data,sizeof(adc_raw_data)/sizeof(adc_raw_data[0]));
+	/* low power . beep */
+	if( adc_raw_data[4] < 2358 ) //( 3.8V / 2 ) / 3.3 * 4096 = 2358;
+	{
+		#if SILIENCE_DEBUG		
+				__beep_ctrl.ioctrl(LOWPOWER,0,0,0);
+		#endif			
+	}
+	//---------------------nrf
 	/* need to calibrate or not */
 	if( __flash.ioctrl(CALI_BUFFER,(unsigned int)&__crc16,&__fls,sizeof(__fls)) != 0 ||
 		  __comm.ioctrl(KEY_CALIBRATION,0,0,0) == 0 ||
 	    __fls.unique_id != unique_id )
 	{
-		/* notity */
-#if SILIENCE_DEBUG		
-		__beep_ctrl.ioctrl(CALIBRATE,0,0,0);
-#endif		
+		/* notity */		
 		__led_ctrl.ioctrl(GS_RS,0,0,0);
 		/* get unique ID */
 		__fls.unique_id = unique_id;
