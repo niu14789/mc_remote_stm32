@@ -35,7 +35,10 @@ static int common_ioctrl(unsigned int cmd,unsigned int param,void * data , unsig
 {
 	unsigned int unique[3];
 	dev_HandleTypeDef * dev;
+	tep_HandleTypeDef * tep;
 	int ret;
+  unsigned int adc_cur = 0;
+  unsigned int high,mid,low;	
 	/* parse the cmd */
 	switch(cmd)
 	{
@@ -52,6 +55,70 @@ static int common_ioctrl(unsigned int cmd,unsigned int param,void * data , unsig
 		case KEY_CALIBRATION:
 			/* red pc13 */
 			ret = HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_13);
+			break;
+		case TRANSFER_RC:
+			/* get data */
+		  if( len != sizeof(tep_HandleTypeDef))
+			{
+				return (-1);
+			}
+			/* transfer data */
+			tep = (tep_HandleTypeDef *)data;
+			/*---------------*/
+			for( int i = 0 ; i < 4 ; i ++ )
+			{
+				  /* get current data */
+          adc_cur = tep->raw[i];
+				  /* get range */
+          high = tep->fls->channel[i][0];
+				  mid  = tep->fls->channel[i][1];
+				  low  = tep->fls->channel[i][2];
+          /* filtering maxium and minium */
+          if( FABS(	high , adc_cur ) < 5 || adc_cur > high )
+					{
+						adc_cur = high;
+					}	
+					/* mid */
+          if( FABS(	mid , adc_cur ) < 5 )
+					{
+						adc_cur = mid;
+					}						
+          /* low */
+          if( FABS(	low , adc_cur ) < 5 || adc_cur < low )
+					{
+						adc_cur = low;
+					}	      
+          /* transfer start */
+          if( tep->dir[i] )
+					{
+						if( adc_cur > mid )
+						{
+								tep->rc->channel[i] = (unsigned short)(((float)500/(float)(high-mid)) * (float)(adc_cur - mid ) + 500 );
+						}
+						else
+						{
+								tep->rc->channel[i] = (unsigned short)(((float)500/(float)(mid-low)) * (float)(adc_cur - low ));
+						}							
+					}else
+          {
+						if( adc_cur > mid )
+						{
+							tep->rc->channel[i] = (unsigned short)(((float)500/(float)((float)mid-(float)high)) * (float)((float)adc_cur - (float)mid ) + 500 );
+						}
+						else
+						{
+							tep->rc->channel[i] = (unsigned short)(((float)500/(float)((float)low-(float)mid)) * (float)((float)adc_cur - (float)low ) + 1000);
+						}
+          }	
+			}
+			/* get other channel */
+			tep->rc->channel567 = HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_5)<<15 | HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_6)<<14 |
+			                      HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_0)<<13 | HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_7)<<12 ;
+			/* unique id */
+			tep->rc->unique_id = tep->unique_id;
+			/* calcu crc */
+			tep->rc->crc = tep->crc->read(0,tep->rc,sizeof(rcs_HandleTypeDef) - 2 );
+      /* break */			
 			break;
 		default:
 			break;

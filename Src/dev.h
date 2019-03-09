@@ -55,6 +55,7 @@
 /* for common */
 #define UNIQUE_ID         (0)
 #define KEY_CALIBRATION   (1)
+#define TRANSFER_RC       (5)
 /* for flash operation */
 #define CALI_BUFFER       (0)
 #define WRITE_CALI        (1)
@@ -93,6 +94,33 @@ typedef struct
 	unsigned short rev[18];
   unsigned short crc_check;
 }fls_HandleTypeDef;
+/**
+  * @brief  device Base Handle Structure definition
+  */
+typedef struct
+{
+	/* analog channel */
+  unsigned short channel[4];
+  /* digital channel */
+  unsigned short  channel567;
+  /* unique id */
+  unsigned short unique_id;
+  /* crc */
+  unsigned short crc ;
+  /*-------------------------*/
+}rcs_HandleTypeDef;
+/**
+  * @brief  device Base Handle Structure definition
+  */
+typedef struct
+{
+	int * raw;
+	rcs_HandleTypeDef * rc;
+	fls_HandleTypeDef * fls;
+	unsigned int * dir;
+	dev_HandleTypeDef * crc;
+	unsigned int unique_id;
+}tep_HandleTypeDef;
 
 /* some functions */
 /* beep init */

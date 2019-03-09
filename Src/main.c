@@ -58,6 +58,8 @@ dev_HandleTypeDef __crc16;
 dev_HandleTypeDef __comm;
 dev_HandleTypeDef __flash;
 fls_HandleTypeDef __fls;
+rcs_HandleTypeDef __rc;
+tep_HandleTypeDef __tep;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -79,6 +81,8 @@ static uint32_t ADC_Value[SAMPLE_DEEP][SAMPLE_CHANNEL_COUNT];
 static unsigned int adc_raw_data[5];
 /* unique ID got it form crc16 */
 static unsigned short unique_id;
+/* temple data */
+static unsigned int dir[4] = {1,0,1,1};
 /*!< DMA transfer complete callback */
 void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc)
 {
@@ -165,6 +169,15 @@ int main(void)
 		/* Filtering the collected data to generate the original data */
 		//adc_simple_filter((const unsigned int *)ADC_Value,adc_raw_data,sizeof(adc_raw_data)/sizeof(adc_raw_data[0]));
     __comm.read((unsigned int)&ADC_Value,adc_raw_data,sizeof(adc_raw_data)/sizeof(adc_raw_data[0]));
+		/* transfer to rc */
+		__tep.raw = (int *)&adc_raw_data;
+		__tep.rc  = &__rc;
+		__tep.fls = &__fls;
+		__tep.dir = (unsigned int *)&dir;
+		__tep.crc = &__crc16;
+		__tep.unique_id = unique_id;
+		/* transfer to rc */
+		__comm.ioctrl(TRANSFER_RC,0,&__tep,sizeof(__tep));
 		
     if( HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_3) == 0 )
 		{
