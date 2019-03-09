@@ -140,8 +140,11 @@ int main(void)
 		__beep_ctrl.ioctrl(CALIBRATE,0,0,0);
 #endif		
 		__led_ctrl.ioctrl(GS_RS,0,0,0);
+		/* get unique ID */
+		__fls.unique_id = unique_id;
 		/* process of calibration */
-		__comm.process((unsigned int)&ADC_Value,(unsigned int)&__fls,0,0);
+		__comm.process((unsigned int)&ADC_Value,(unsigned int)&__fls,
+			             (unsigned int)&__led_ctrl,(unsigned int)&__flash,(unsigned int)&__crc16);
 	}
 	/*------------*/
 	unsigned char beep_t = 0,beep_t1 = 0;
@@ -149,6 +152,7 @@ int main(void)
   /* USER CODE END 2 */
   //__flash.write(0x0800F000 - 2,"1234",4);
   /* Infinite loop */
+	__led_ctrl.ioctrl(GS_RO,0,0,0);
   /* USER CODE BEGIN WHILE */
   while (1)
   {

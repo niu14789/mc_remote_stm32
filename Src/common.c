@@ -137,7 +137,7 @@ static unsigned short check_mean_var(unsigned short * mean_get)
     vart[3] += ((float)channel_raw[3][i] - mean[3])*((float)channel_raw[3][i] - mean[3]) / (float)DEEP;
   }
   /* check */
-  if( (vart[0] < 1) && (vart[1] < 1) && (vart[2] < 1) && (vart[3] < 1) )
+  if( (vart[0] < 10) && (vart[1] < 10) && (vart[2] < 10) && (vart[3] < 10) )
   {
     /* get mean */
     mean_get[0] = (unsigned short)(mean[0]+0.5f);
@@ -153,7 +153,7 @@ static unsigned short check_mean_var(unsigned short * mean_get)
   }
 }
 /* process */
-void common_process(unsigned int pm1,unsigned int pm2,unsigned int pm3,unsigned int pm4)
+void common_process(unsigned int pm1,unsigned int pm2,unsigned int pm3,unsigned int pm4,unsigned int pm5)
 {
 	unsigned int adc_raw[5];
 	static unsigned int freq_ctrl = 0;
@@ -163,6 +163,8 @@ void common_process(unsigned int pm1,unsigned int pm2,unsigned int pm3,unsigned 
 	unsigned short calibration_tmp[4];	
 	/* fls_HandleTypeDef */
 	fls_HandleTypeDef * fls = ( fls_HandleTypeDef * )pm2;
+	dev_HandleTypeDef * led = ( dev_HandleTypeDef * )pm3;
+	dev_HandleTypeDef * fla = ( dev_HandleTypeDef * )pm4;
 	/* infinite loop */
 	while(1)
 	{
@@ -173,10 +175,8 @@ void common_process(unsigned int pm1,unsigned int pm2,unsigned int pm3,unsigned 
 			/* get data */
 		  common_read((unsigned int)pm1,adc_raw,sizeof(adc_raw)/sizeof(adc_raw[0]));
 			/* channel_raw */
-			channel_raw[0][channel_count] = adc_raw[0];
-			channel_raw[1][channel_count] = adc_raw[1];
-			channel_raw[2][channel_count] = adc_raw[2];
-			channel_raw[3][channel_count] = adc_raw[3];
+			for( int i = 0 ; i < 4 ; i ++ )
+			  channel_raw[i][channel_count] = adc_raw[i];
 			/* get OK */
 			if( ++channel_count == DEEP )
 			{
@@ -193,12 +193,85 @@ void common_process(unsigned int pm1,unsigned int pm2,unsigned int pm3,unsigned 
 		switch(calibration_step)
 		{
 			case 0://get high		
+				/* stabled */
+			  if( calibration_flag == 1 )
+				{
+					calibration_flag = 0;//clear
+					/* Determine whether data is available */
+					if( FOUR_THAN(calibration_tmp,2000) )
+					{
+							/* save data */
+						  for( int i = 0 ; i < 4 ; i ++ )
+							   fls->channel[i][0] = calibration_tmp[i];
+							/* Switching state */
+							calibration_step = 1;
+							/* led */		
+              led->ioctrl(GF_RO,0,0,0);						
+					}
+				}
+			  /* break */
 				break;
 			case 1://get low
+        /* stabled */
+			  if( calibration_flag == 1 )
+				{
+					calibration_flag = 0;//clear
+					/* Determine whether data is available */
+					if( FOUR_LESS(calibration_tmp,1500))
+					{
+							/* save data */
+						  for( int i = 0 ; i < 4 ; i ++ )
+							  fls->channel[i][2] = calibration_tmp[i];
+							/* Switching state */
+							calibration_step = 2;
+							/* led */		
+              led->ioctrl(GO_RF,0,0,0);						
+					}
+				}				
 				break;
 			case 2://get mid
+        /* stabled */
+			  if( calibration_flag == 1 )
+				{
+						calibration_flag = 0;//clear
+						/* Determine whether data is available */
+						/* save data */
+					  for( int i = 0 ; i < 4 ; i ++ )
+						  fls->channel[i][1] = calibration_tmp[i];
+						/* Switching state */
+					  for( int i = 0 ; i < 4 ; i ++ )
+							calibration_tmp[i] = FABS(( fls->channel[i][0] - fls->channel[i][2] ) / 2 + fls->channel[i][2] , 
+					                                fls->channel[i][1] );
+					  /* Determine whether data is available */
+					  if( FOUR_LESS(calibration_tmp,150))
+						{
+								/* write into flash memory */
+								if( fla->ioctrl(WRITE_CALI,pm5,fls,sizeof(fls_HandleTypeDef)) == 0 )
+								{
+									/* ok */
+									/* calibrate OK */
+									led->ioctrl(GO_RO,0,0,0);		
+									/* wait for key */
+									while( common_ioctrl(KEY_CALIBRATION,0,0,0) == 0 );
+									/* out */
+									return;								
+							}
+							else
+							{
+								 /* error reset */
+							   led->ioctrl(GT_RT,0,0,0);
+							}
+						}
+						else
+						{
+						  /* error reset */
+							led->ioctrl(GS_RS,0,0,0);
+							/* reset */
+							calibration_step = 0;
+						}
+				}					
 				break;
-			case 3://check 
+			default :
 				break;
 		}
 	}

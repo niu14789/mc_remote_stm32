@@ -28,16 +28,28 @@
 /* USER CODE END Includes */
 static int flash_write(unsigned int addr,void * data , unsigned int len)
 {
-	/* extern */
-	extern void FLASH_PageErase(uint32_t PageAddress);
+	/* error */
 	int ret = 0;
 	unsigned short * dat = (unsigned short *)data;
+	unsigned int PageError;
 	/* erase frase */
-	FLASH_PageErase(addr);
+	FLASH_EraseInitTypeDef EraseInitStruct;
+	/* unclock flash */
+	HAL_FLASH_Unlock();	
+	/* struct */
+	EraseInitStruct.TypeErase = FLASH_TYPEERASE_PAGES;
+	EraseInitStruct.PageAddress = addr;
+	EraseInitStruct.NbPages = 1;
+  /* erase */
+  if (HAL_FLASHEx_Erase(&EraseInitStruct, &PageError) != HAL_OK )
+	{
+		/* error */
+		return (1);
+	}
 	/* write into flash */
 	for( int i = 0 ; i < len / 2 ; i ++ )
 	{
-			ret += HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD,addr + i * 2 , dat[i]);
+		ret += HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD,addr + i * 2 , dat[i]);
 	}
 	/*------*/
 	return ret;
@@ -46,7 +58,7 @@ static int flash_write(unsigned int addr,void * data , unsigned int len)
 static int flash_read(unsigned int addr,void * data,unsigned int len)
 {
 	/* judging the length */
-	if( (addr + len) >= 128*1024 )//overflow
+	if( (addr + len) >= 128*1024 + 0x08000000 )//overflow
 	{
 		return (-1);
 	}
@@ -64,9 +76,10 @@ static int flash_read(unsigned int addr,void * data,unsigned int len)
 /* Define various functional interfaces */
 static int flash_ioctrl(unsigned int cmd,unsigned int param,void * data , unsigned int len)
 {
+	/* get interface */
 	int ret = 0;
-	dev_HandleTypeDef   * dev;
-	fls_HandleTypeDef * fls;
+	dev_HandleTypeDef  * dev = (dev_HandleTypeDef *)param;
+	fls_HandleTypeDef  * fls = (fls_HandleTypeDef *)data;;
 	/* parse the cmd */
 	switch(cmd)
 	{
@@ -76,16 +89,23 @@ static int flash_ioctrl(unsigned int cmd,unsigned int param,void * data , unsign
 			{
 				return (-1);/* can not */
 			}
-			/* get interface */
-			dev = (dev_HandleTypeDef   *)param;
-			fls = (fls_HandleTypeDef *)data;
-			/* read flash data into fls */
+		  /* read flash data into fls */
 			flash_read(EEBASE_ADDR,fls,sizeof(fls_HandleTypeDef));
 			/* calibate crc and check */
-			ret = ( dev->read(0,fls,len - 2 ) == fls->crc_check ) ? 1 : 0 ; //remove the crc16 section
+			ret = ( dev->read(0,fls,len - 2 ) == fls->crc_check ) ? 0 : 1 ; //remove the crc16 section
 			/* break */
 			break;
-		case 1:
+		case WRITE_CALI:
+			/* judging the length */
+			if( len != sizeof(fls_HandleTypeDef) )
+			{
+				return (-1);/* can not */
+			}
+      /* calibate crc and check */	
+			fls->crc_check = dev->read(0,fls,len - 2 );
+			/* write into */
+			ret = flash_write(EEBASE_ADDR,fls,sizeof(fls_HandleTypeDef));
+      /* break */			
 			break;
 		default:
 			break;

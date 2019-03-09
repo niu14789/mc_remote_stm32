@@ -56,9 +56,13 @@
 #define UNIQUE_ID         (0)
 #define KEY_CALIBRATION   (1)
 /* for flash operation */
-#define CALI_BUFFER (0)
+#define CALI_BUFFER       (0)
+#define WRITE_CALI        (1)
 /*------------*/
 /* USER CODE END Includes */
+#define FOUR_THAN(f,d)   ( (f[0]) > (d) && (f[1]) > (d) && (f[2]) > (d) && (f[3]) > (d) )
+#define FOUR_LESS(f,d)   ( (f[0]) < (d) && (f[1]) < (d) && (f[2]) < (d) && (f[3]) < (d) )
+#define FABS(f,d)        ( ( (f) > (d) ) ? ( (f) - (d) ) : ( (d) - (f) ) )
 /**
   * @brief  device Base Handle Structure definition
   */
@@ -77,7 +81,7 @@ typedef struct
 	/* get state */
 	int (*state)(void);
 	/* process */
-	void (*process)(unsigned int pm1,unsigned int pm2,unsigned int pm3,unsigned int pm4);
+	void (*process)(unsigned int pm1,unsigned int pm2,unsigned int pm3,unsigned int pm4,unsigned int pm5);
 }dev_HandleTypeDef;
 /**
   * @brief  device Base Handle Structure definition
