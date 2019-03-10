@@ -55,6 +55,7 @@
 /* for common */
 #define UNIQUE_ID         (0)
 #define KEY_CALIBRATION   (1)
+#define KEY_RC            (2)
 #define TRANSFER_RC       (5)
 /* for flash operation */
 #define CALI_BUFFER       (0)
@@ -129,7 +130,7 @@ int led_Init(dev_HandleTypeDef * dev);
 int CRC16_Init(dev_HandleTypeDef * dev);
 int common_Init(dev_HandleTypeDef * dev);
 int Flash_Init(dev_HandleTypeDef * dev);
-int nrf24L01_Init( dev_HandleTypeDef * dev , void * spi_handle );
+int nrf24L01_Init( dev_HandleTypeDef * dev , void * spi_handle ,unsigned int unique_id );
 
 /* end of files */
 #endif

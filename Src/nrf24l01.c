@@ -698,7 +698,7 @@ static void delay_ms_rf(unsigned int ms)
 	while( !((HAL_GetTick() - tick) > ms) );
 }
 /* dev init */
-int nrf24L01_Init( dev_HandleTypeDef * dev , void * spi_handle )
+int nrf24L01_Init( dev_HandleTypeDef * dev , void * spi_handle ,unsigned int unique_id )
 {
 	  /* transfer interface */
 	  if( spi_handle != 0 && rf_spi_handle == 0 )
@@ -714,7 +714,13 @@ int nrf24L01_Init( dev_HandleTypeDef * dev , void * spi_handle )
 		{
 			return (-1);
 		}
-		/*-------------*/
+		/* set addr num */
+		if( HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_7) == 1 )//no press state
+		{
+			tr_addr_g[0] = unique_id >> 8;
+			tr_addr_g[1] = unique_id & 0xff;
+		}
+		/* init */
 		RF24L01_Init(tr_addr_g);
 		/* ok */
 		return 0;

@@ -136,7 +136,7 @@ int main(void)
 	/* logic code . check battery and nrf first */
 	__comm.read((unsigned int)&ADC_Value,adc_raw_data,sizeof(adc_raw_data)/sizeof(adc_raw_data[0]));
 	/* check nrf */
-	if( nrf24L01_Init(&__nrf,&hspi2) != 0 )
+	if( nrf24L01_Init(&__nrf,&hspi2,unique_id) != 0 )
 	{
 		/* can not find the nrf moudle */
 		__led_ctrl.ioctrl(GT_RT,0,0,0);
@@ -156,6 +156,11 @@ int main(void)
 		__comm.process((unsigned int)&ADC_Value,(unsigned int)&__fls,
 			             (unsigned int)&__led_ctrl,(unsigned int)&__flash,(unsigned int)&__crc16);
 	}
+	/* Get the direction of each channel */
+	dir[0] = ( HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_6) == 0 ) ? 0 : 1;
+	dir[1] = ( HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_5) == 0 ) ? 1 : 0;
+	dir[2] = ( HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_1) == 0 ) ? 0 : 1;
+	dir[3] = ( HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_3) == 0 ) ? 0 : 1;
   /* USER CODE END 2 */
 
   /* Infinite loop */

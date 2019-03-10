@@ -56,6 +56,10 @@ static int common_ioctrl(unsigned int cmd,unsigned int param,void * data , unsig
 			/* red pc13 */
 			ret = HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_13);
 			break;
+		case KEY_RC:
+			/* read rc key */
+		  ret = HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_7);
+			break;
 		case TRANSFER_RC:
 			/* get data */
 		  if( len != sizeof(tep_HandleTypeDef))
