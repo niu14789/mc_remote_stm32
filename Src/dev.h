@@ -80,7 +80,7 @@ typedef struct
 	/* ioctrl */
 	int (*ioctrl)(unsigned int cmd,unsigned int param,void * data,unsigned len);
 	/* get state */
-	int (*state)(void);
+	void (*state)(unsigned int t);
 	/* process */
 	void (*process)(unsigned int pm1,unsigned int pm2,unsigned int pm3,unsigned int pm4,unsigned int pm5);
 }dev_HandleTypeDef;
