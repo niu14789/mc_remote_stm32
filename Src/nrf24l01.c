@@ -31,6 +31,7 @@
 
 SPI_HandleTypeDef * rf_spi_handle;
 static unsigned char  tr_addr_g[5] = {INIT_ADDR};
+static unsigned char  rf_ch_g = 60;
 /* delay */
 static void rf_delay_ms(unsigned int t)
 {
@@ -551,7 +552,7 @@ void RF24L01_Set_Mode( nRf24l01ModeType Mode )
   *			TX_OK：发送完成
   *			0xFF:其他原因
   */  
-unsigned char NRF24L01_TxPacket( unsigned char *txbuf, unsigned char Length ,unsigned char * addr)
+unsigned char NRF24L01_TxPacket( unsigned char *txbuf, unsigned char Length ,unsigned char * addr,unsigned char rf_ch)
 {
 	unsigned char l_Status = 0;
 	uint16_t l_MsTimes = 0;
@@ -568,7 +569,7 @@ unsigned char NRF24L01_TxPacket( unsigned char *txbuf, unsigned char Length ,uns
 		rf_delay_ms( 1 );
 		if( 500 == l_MsTimes++ )						//500ms还没有发送成功，重新初始化设备
 		{
-      RF24L01_Init(addr);
+      RF24L01_Init(addr,rf_ch);
 			RF24L01_Set_Mode( MODE_TX );
 			break;
 		}
@@ -635,7 +636,7 @@ unsigned char NRF24L01_RxPacket( unsigned char *rxbuf ,unsigned char *addr)
   * @note  :无
   * @retval:无
   */
-void RF24L01_Init(unsigned char * addr )
+void RF24L01_Init(unsigned char * addr,unsigned char rf_ch )
 {
     /* addr */
     RF24L01_SET_CE_HIGH( );
@@ -661,7 +662,7 @@ void RF24L01_Init(unsigned char * addr )
     NRF24L01_Write_Reg( SETUP_AW, AW_5BYTES );     			//μ??·?í?è 5??×??ú
     NRF24L01_Write_Reg( SETUP_RETR, ARD_4000US |
                         ( REPEAT_CNT & 0x0F ) );         	//???′μè′yê±?? 250us
-    NRF24L01_Write_Reg( RF_CH, 60 );             			//3?ê??ˉí¨μà
+    NRF24L01_Write_Reg( RF_CH, rf_ch );             			//3?ê??ˉí¨μà
     NRF24L01_Write_Reg( RF_SETUP, 0x26 );
 
     NRF24L01_Set_TxAddr( addr, 5 );                      //éè??TXμ??·
@@ -675,7 +676,7 @@ int nrf_write(unsigned int addr,void * data , unsigned int len)
 	/* set TX mode */
   RF24L01_Set_Mode( MODE_TX );
 	/* send data */
-  NRF24L01_TxPacket( (unsigned char *)data , len ,tr_addr_g );
+  NRF24L01_TxPacket( (unsigned char *)data , len ,tr_addr_g , rf_ch_g);
   /* return */
 	return 0;
 }
@@ -698,7 +699,7 @@ static void delay_ms_rf(unsigned int ms)
 	while( !((HAL_GetTick() - tick) > ms) );
 }
 /* dev init */
-int nrf24L01_Init( dev_HandleTypeDef * dev , void * spi_handle ,unsigned int unique_id )
+int nrf24L01_Init( dev_HandleTypeDef * dev , void * spi_handle ,unsigned int unique_id)
 {
 	  /* transfer interface */
 	  if( spi_handle != 0 && rf_spi_handle == 0 )
@@ -719,9 +720,11 @@ int nrf24L01_Init( dev_HandleTypeDef * dev , void * spi_handle ,unsigned int uni
 		{
 			tr_addr_g[0] = unique_id >> 8;
 			tr_addr_g[1] = unique_id & 0xff;
+			/* set tf channel */
+			rf_ch_g = (tr_addr_g[0] + tr_addr_g[1]) & 0x7f;//0~6bit is the rf channel
 		}
 		/* init */
-		RF24L01_Init(tr_addr_g);
+		RF24L01_Init(tr_addr_g,rf_ch_g);
 		/* ok */
 		return 0;
 }
