@@ -84,6 +84,8 @@ static unsigned int adc_raw_data[5];
 static unsigned short unique_id;
 /* temple data */
 static unsigned int dir[4] = {1,0,1,1};
+/* send data freq */
+static unsigned int send_freq = 0;
 /*!< DMA transfer complete callback */
 void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc)
 {
@@ -180,7 +182,10 @@ int main(void)
 		/* transfer to rc */
 		__comm.ioctrl(TRANSFER_RC,0,&__tep,sizeof(__tep));
 		/* send data */
-		__nrf.write(0,&__rc,sizeof(__rc));
+		if( ! ( send_freq ++ % 80 ) )
+		{
+		   __nrf.write(0,&__rc,sizeof(__rc));
+		}
 		/* low power . beep */
 		if( adc_raw_data[4] < 2358 ) //( 3.8V / 2 ) / 3.3 * 4096 = 2358;
 		{
